@@ -307,13 +307,14 @@ func (m *Manager) Notify(ctx context.Context, rec gwsdk.NotificationRecord) erro
 // gateway. Returns an error (surfaced to the calling agent) when no gateway is
 // up. Satisfies aitools.GatewayBridge.
 func (m *Manager) PostMessage(ctx context.Context, payload string, attachments []aitools.GatewayAttachment) error {
+	missionID, taskID := aitools.MissionContextFromContext(ctx)
 	m.mu.Lock()
 	gw := m.gw
 	m.mu.Unlock()
 	if gw == nil {
 		return fmt.Errorf("no gateway is currently running")
 	}
-	req := gwsdk.PostMessageRequest{Payload: payload}
+	req := gwsdk.PostMessageRequest{Payload: payload, MissionID: missionID, TaskID: taskID}
 	for _, a := range attachments {
 		req.Attachments = append(req.Attachments, gwsdk.FileAttachment{
 			Filename: a.Filename,
