@@ -215,13 +215,13 @@ func (h *handlers) listRuns(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 
 	type runSummary struct {
-		ID          string     `json:"id"`
-		MissionName string     `json:"missionName"`
-		Status      string     `json:"status"`
-		StartedAt   any        `json:"startedAt"`
-		FinishedAt  any        `json:"finishedAt,omitempty"`
-		Inputs      any        `json:"inputs,omitempty"`
-		TaskCount   int        `json:"taskCount"`
+		ID          string           `json:"id"`
+		MissionName string           `json:"missionName"`
+		Status      string           `json:"status"`
+		StartedAt   any              `json:"startedAt"`
+		FinishedAt  any              `json:"finishedAt,omitempty"`
+		Inputs      any              `json:"inputs,omitempty"`
+		TaskCount   int              `json:"taskCount"`
 		Datasets    []datasetSummary `json:"datasets,omitempty"`
 	}
 
