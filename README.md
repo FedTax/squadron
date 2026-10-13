@@ -148,3 +148,9 @@ Plugins extend Squadron with custom tools. The [squadron-sdk](https://github.com
 ## License
 
 [MIT](LICENSE)
+
+## Local Slack testing
+
+See [Test Slack messages locally](docs/local-slack-testing.md) to build the host and
+gateway against one SDK checkout, isolate test state, and exercise forms, replies,
+human answers, and cross-mission threading with a synthetic mission.
