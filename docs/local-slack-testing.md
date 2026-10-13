@@ -1,4 +1,8 @@
-# Test Slack messages locally
+# Test the Slack integration locally
+
+For building and running Squadron, testing mission behavior, and inspecting local
+state, start with [Test Squadron locally](local-testing.md). This guide covers the
+Slack-specific scenarios and optional live connection.
 
 Start with the Slack gateway's mock walkthrough to inspect outgoing messages
 without credentials or external posts. It runs the real gateway message handlers
@@ -54,33 +58,19 @@ A live `/squadron` form needs real Slack tokens but does not call the model unti
 you submit it. Running the fixture needs a real Anthropic API key and incurs
 model usage. A dummy key will cause the run to fail rather than simulate an agent.
 
-## Build matching source revisions
+## Build the optional gateway
 
-Use sibling checkouts of `squadron`, `squadron-gateway-sdk`, and
-`squadron-gateway-slack`. Check out the branches or PR revisions you intend to
-test in each repository first. Run these commands from their parent directory:
+Use the sibling checkouts and SDK workspace override described in the
+[local testing guide](local-testing.md#how-do-i-build-and-test-source-changes).
+From their parent directory:
 
 ```bash
-# Create this workspace once, in a directory without an existing go.work.
-go work init ./squadron ./squadron-gateway-slack
-go work edit -replace=github.com/mlund01/squadron-gateway-sdk=./squadron-gateway-sdk
 mkdir -p bin
 go build -o bin/squadron ./squadron/cmd/cli
 go build -o bin/slack-gateway ./squadron-gateway-slack
-go test ./squadron-gateway-slack/... ./squadron/gateway/... ./squadron/mcphost/...
+go test ./squadron-gateway-slack/...
 (cd squadron-gateway-sdk && GOWORK=off go test ./...)
 ```
-
-The workspace replacement makes both executables use the same local SDK, even
-when their module files pin a released or forked SDK revision. The SDK is a
-replacement target, so do not also add it to the workspace's `use` list.
-The workspace file belongs outside the repositories so it does not change their
-published dependencies. Go must meet the version required by their module files.
-
-After fetching new branch commits, repeat the builds and tests, reinstall the
-gateway binary below, and restart Squadron. An already-running process continues
-using its loaded binary. Record each repository's `git rev-parse HEAD` when
-reporting a result, because a passing test applies to those exact revisions.
 
 ## Give the test its own state
 
