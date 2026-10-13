@@ -1,18 +1,9 @@
 # Test the Slack integration locally
 
-For building and running Squadron, testing mission behavior, and inspecting local
-state, start with [Test Squadron locally](local-testing.md). This guide covers the
-Slack-specific scenarios and optional live connection.
-
-Start with the Slack gateway's mock walkthrough to inspect outgoing messages
-without credentials or external posts. It runs the real gateway message handlers
-against local HTTP substitutes for Slack and Squadron's mission API. Its scripted
-case events exercise the message contract without asking a model to choose tools.
-
-For a later live check, the fixture in
-[`examples/slack-smoke/squadron.hcl`](../examples/slack-smoke/squadron.hcl) uses a
-small synthetic mission that needs only Squadron, its Slack gateway, and an
-Anthropic model. It does not load rate workflows or their external tools.
+Use the request recorder to inspect the messages the gateway sends, or run the
+smoke mission to exercise questions and answers in a Slack test channel. For
+building Squadron and testing mission execution with a local model stub, see
+[Test Squadron locally](local-testing.md).
 
 ## Preview the outgoing calls without credentials
 
@@ -25,13 +16,12 @@ SQUADRON_SLACK_PREVIEW="$PWD/preview/slack-calls.json" \
   go test ./squadron-gateway-slack -run '^TestMockSlackPreview$' -count=1 -v
 ```
 
-The Slack gateway checkout must include `mock_preview_test.go`. This walkthrough
-uses a local Slack HTTP endpoint and a local MCP server, so it needs no vault,
-Slack app, model, or Socket Mode connection. It records two entry paths: a mission
-that posts first, and a mission started through the slash-command form. Each path
-updates the root, posts a reply, asks and resolves choice and free-text questions,
-starts a routed run, sends a failure notification, and reloads a checkpoint before
-a final root update.
+The recorder uses local substitutes for Slack’s API and Squadron’s mission API.
+It supplies mission events and answers directly to the gateway, so it needs no
+credentials. It records two entry paths: a mission that posts first, and a mission
+started through the slash-command form. Each sequence includes root updates,
+replies, choice and free-text questions, answers, a second run using the same
+request key, a failure notification, and a checkpoint reload.
 
 The JSON contains `calls` with the API method, message payload, returned timestamp,
 and scenario step, plus `checks` for shared-thread behavior. `chat.postMessage`
@@ -40,16 +30,14 @@ without `thread_ts` creates a root; with `thread_ts`, it creates a reply.
 contain Slack's question controls, while `views.open` and `views.update` contain
 the start form.
 
-The walkthrough passing means it completed and recorded the requests. Inspect the
-`checks` separately: a false result records a behavioral defect without preventing
-the rest of the preview from being captured. The regular tests remain separate.
-Scripted answers bypass Socket Mode delivery, and scripted mission events do not
-prove that a live model or the rate workflow will choose the same actions. Slack
-itself may also reject a payload that the permissive local server accepts.
+The recorder continues after a failed thread check so the output includes later
+messages as well. Therefore, a successful test exit means the capture completed;
+inspect `checks` for thread-mapping failures. The local server accepts the recorded
+payloads without enforcing Slack’s validation rules. Use the live test below to
+check Slack’s acceptance of the messages and delivery of user interactions.
 
 ## When are real credentials needed?
 
-The SDK, host, and Slack gateway tests run without Slack or model credentials.
 `verify` checks the fixture's configuration and finds the local gateway binary;
 it does not authenticate to Slack or call a model. Placeholder values are enough
 for that check. They are not enough to execute a mission.
@@ -58,7 +46,7 @@ A live `/squadron` form needs real Slack tokens but does not call the model unti
 you submit it. Running the fixture needs a real Anthropic API key and incurs
 model usage. A dummy key will cause the run to fail rather than simulate an agent.
 
-## Build the optional gateway
+## Build the host and gateway
 
 Use the sibling checkouts and SDK workspace override described in the
 [local testing guide](local-testing.md#how-do-i-build-and-test-source-changes).
@@ -72,7 +60,11 @@ go test ./squadron-gateway-slack/...
 (cd squadron-gateway-sdk && GOWORK=off go test ./...)
 ```
 
-## Give the test its own state
+## Prepare the live smoke mission
+
+The [smoke fixture](../examples/slack-smoke/squadron.hcl) posts a root message,
+asks two questions, and routes to a second mission that joins the same thread.
+Its tools are limited to posting messages and asking questions.
 
 From the same parent directory:
 
@@ -139,9 +131,8 @@ cd smoke
 The gateway checkpoint path is relative to the working directory, so start from
 `smoke` as shown. Foreground mode keeps logs in the terminal, and Ctrl-C stops the
 instance. Headless mode avoids downloading a command-center UI; Slack talks to
-the local MCP host directly. Confirm the gateway reports ready before opening
-the form. A configuration-validation success alone does not prove the gateway
-connected.
+the local MCP host directly. Wait for the gateway’s ready message in the log before opening the form, because
+`verify` checks configuration without connecting to Slack.
 
 ## Check the behavior in Slack
 
@@ -163,24 +154,7 @@ connected.
    case key. It should rejoin the saved thread. Use a fresh key for unrelated
    tests; reusing a key deliberately exercises the persisted mapping.
 
-These are acceptance checks, not guarantees that a branch implements all of them.
 If a routed run opens a second root, inspect whether the gateway saved both the
 run-to-thread and key-to-thread mappings when the first run posted its root.
 If an agent skips a requested step, inspect its tool calls before attributing the
 result to Slack transport: this fixture uses a live model, not a scripted one.
-
-## How does this relate to the rate workflow configuration?
-
-The fixture checks the transport contract used by `slack_thread`: post the stable
-request key before asking a question, update the root with `root = true`, and
-leave ordinary replies in the thread. It does not prove that the rate agents load
-the skill, claim start events correctly, or produce the required final summary.
-
-Test the rate configuration separately in a disposable copy of its selected
-revision. Switch its Slack gateway to `version = "local"`, install the same binary
-in that copy's state directory, set a separate checkpoint, and make its MCP URL,
-port, and secret agree. A release-pinned gateway can ignore new payload fields,
-which makes a valid configuration appear to run while missing the behavior under
-test. The full workflows additionally need their configured model, plugin, MCP,
-and service credentials. Stubbing those dependencies checks configuration shape;
-it cannot establish that the actual workflow succeeds.

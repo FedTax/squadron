@@ -1,10 +1,9 @@
 # Test Squadron locally
 
-Local testing should let you change a mission, runtime, or integration and inspect
-what Squadron actually does before involving production services. Run the built
-CLI against a separate configuration directory and keep its vault, database, and
-logs with that test. Substitute the external services relevant to the scenario;
-a gateway is optional.
+Run Squadron against a local model stub to reproduce mission behavior without
+model credentials. The supplied scenarios execute the CLI and check its saved
+results. Each run gets its own configuration, vault, database, and logs so tests
+can be repeated without reusing an earlier run’s state.
 
 ## How do I run a mission without credentials?
 
@@ -30,9 +29,9 @@ SQLite state. The script checks the exit result, number of model requests, and
 persisted mission and task states. Unexpected requests or an exhausted script
 fail the run, so a missing response cannot silently become a success.
 
-No model key, Slack app, or other external account is needed for these scenarios.
-The placeholder key works because the configured model endpoint is the local
-stub. A placeholder key pointed at a real model provider would fail authentication.
+The fixture points the model at the local stub, which accepts its placeholder
+API key. To test model decisions instead of scripted responses, use a provider
+endpoint and a valid key in a separate test configuration.
 
 ## Where are the results, and how do I repeat a test?
 
@@ -68,9 +67,8 @@ runtime behavior for those decisions, not whether a live model would choose them
 
 `build` writes the CLI to the test root's `bin` directory. `test` rebuilds it,
 runs the configuration, mission, agent, built-in tool, storage, human-input,
-gateway-host, and MCP-host package tests, then runs the four CLI scenarios. This
-is a focused local check, not every repository test or a production validation.
-Use `go test ./...` when the change requires the complete repository suite.
+gateway-host, and MCP-host package tests, then runs the four CLI scenarios.
+Run `go test ./...` for the complete repository suite.
 
 For related repositories, check out the intended branches in sibling directories.
 A Go workspace can make the runtime and an integration use the same SDK source
@@ -108,8 +106,9 @@ python3 scripts/local-test.py /path/to/fixture/scenario.json \
 ```
 
 Use an output path that does not exist. The runner refuses to overwrite evidence.
-Its current fixture loader copies the adjacent HCL file, not a complete application
-configuration tree. The ordered response script suits sequential scenarios;
+The fixture must be self-contained in the adjacent `squadron.hcl`, because the
+runner copies only that file into the run directory. The ordered response
+script suits sequential scenarios;
 parallel agent calls require matching responses by request identity instead of
 assuming a single call order.
 
@@ -139,8 +138,9 @@ Review the copied configuration before loading it. `verify` can install plugins
 and contact configured MCP services, while `start` can start gateways and schedules.
 An isolated database does not isolate external side effects. Point model and
 service endpoints at local stubs, replace external tools with test implementations,
-and remove automatic triggers or schedules that are outside the scenario. This
-setup does not automatically rewrite arbitrary configurations into offline ones.
+and remove automatic triggers or schedules that are outside the scenario. The
+commands load the configuration as written; they do not substitute endpoints
+or credentials.
 
 For a live-model test, store the model key in that test directory's vault and use
 the provider's endpoint. For a mixed test, use a real model with stubbed service
@@ -156,9 +156,8 @@ binary belongs at
 inside that configuration and start from its directory so saved mappings stay
 with the same test state.
 
-[Slack message testing](local-slack-testing.md) is one example: it can record
-outgoing Slack API calls without a live workspace, or later connect a synthetic
-mission to a test app. Its mock directly exercises gateway handlers and does not
-replace the local runtime scenarios above. A rate workflow needs its own tests
-for input handoffs, skills, checkpoints, and service calls; a passing gateway
-preview cannot establish those behaviors.
+[Slack message testing](local-slack-testing.md) shows how to capture a gateway’s
+outgoing API requests with a local server and how to connect a test instance to
+Slack. Choose the test boundary according to the behavior you need to check:
+supply events directly to inspect gateway formatting, or run a mission to check
+how its tool calls produce those events.
