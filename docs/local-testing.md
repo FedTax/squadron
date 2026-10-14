@@ -10,7 +10,7 @@ can be repeated without reusing an earlier run’s state.
 From the Squadron checkout, with Go and Python 3 installed:
 
 ```bash
-./scripts/local.sh run
+make run
 ```
 
 This builds the CLI and executes four scenarios through that binary:
@@ -40,8 +40,8 @@ ignored by Git. Set `SQUADRON_TEST_ROOT` to use a separate workspace:
 
 ```bash
 export SQUADRON_TEST_ROOT="$HOME/code/squadron-local-testing"
-./scripts/local.sh run routing
-./scripts/local.sh run delegation failure missing-input
+make run SCENARIOS=routing
+make run SCENARIOS="delegation failure missing-input"
 ```
 
 Each invocation creates a fresh directory under `runs`, so a previous database
@@ -61,8 +61,8 @@ runtime behavior for those decisions, not whether a live model would choose them
 ## How do I build and test source changes?
 
 ```bash
-./scripts/local.sh build
-./scripts/local.sh test
+make build
+make test
 ```
 
 `build` writes the CLI to the test root's `bin` directory. `test` rebuilds it,
@@ -123,8 +123,8 @@ Create a disposable configuration directory from the revision you want to test,
 then run:
 
 ```bash
-./scripts/local.sh verify /absolute/path/to/test-config
-./scripts/local.sh start /absolute/path/to/test-config
+make verify CONFIG=/path/to/test-config
+make start CONFIG=/path/to/test-config
 ```
 
 The instance runs in the foreground; Ctrl-C stops it. Both commands explicitly use
