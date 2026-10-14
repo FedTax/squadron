@@ -38,6 +38,7 @@ type gatewayClient interface {
 	OnNotification(ctx context.Context, rec gwsdk.NotificationRecord) error
 	PostMessage(ctx context.Context, req gwsdk.PostMessageRequest) error
 	MessageToolSpec(ctx context.Context) (gwsdk.MessageToolSpec, error)
+	Link(ctx context.Context, req gwsdk.LinkRequest) error
 	Shutdown(ctx context.Context) error
 }
 
@@ -323,6 +324,19 @@ func (m *Manager) PostMessage(ctx context.Context, payload string, attachments [
 		})
 	}
 	return gw.PostMessage(ctx, req)
+}
+
+// Link asks the running gateway to join the calling run to the request it
+// holds under key. Satisfies aitools.GatewayBridge.
+func (m *Manager) Link(ctx context.Context, key string) error {
+	missionID, taskID := aitools.MissionContextFromContext(ctx)
+	m.mu.Lock()
+	gw := m.gw
+	m.mu.Unlock()
+	if gw == nil {
+		return fmt.Errorf("no gateway is currently running")
+	}
+	return gw.Link(ctx, gwsdk.LinkRequest{Key: key, MissionID: missionID, TaskID: taskID})
 }
 
 // MessageToolDescription returns the gateway-supplied post-tool description
