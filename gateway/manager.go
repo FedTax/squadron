@@ -316,15 +316,7 @@ func (m *Manager) PostMessage(ctx context.Context, payload string, attachments [
 	if gw == nil {
 		return "", fmt.Errorf("no gateway is currently running")
 	}
-	req := gwsdk.PostMessageRequest{Payload: payload, MissionID: missionID, TaskID: taskID}
-	for _, a := range attachments {
-		req.Attachments = append(req.Attachments, gwsdk.FileAttachment{
-			Filename: a.Filename,
-			MimeType: a.MimeType,
-			Content:  a.Content,
-		})
-	}
-	resp, err := gw.PostMessage(ctx, req)
+	resp, err := gw.PostMessage(ctx, gwsdk.PostMessageRequest{Payload: payload, Attachments: sdkAttachments(attachments), MissionID: missionID, TaskID: taskID})
 	return resp.MessageID, err
 }
 
@@ -343,7 +335,7 @@ func (m *Manager) Link(ctx context.Context, key string) error {
 
 // EditMessage asks the running gateway to replace the message id names with
 // payload. Satisfies aitools.GatewayBridge.
-func (m *Manager) EditMessage(ctx context.Context, id, payload string) error {
+func (m *Manager) EditMessage(ctx context.Context, id, payload string, attachments []aitools.GatewayAttachment) error {
 	missionID, taskID := aitools.MissionContextFromContext(ctx)
 	m.mu.Lock()
 	gw := m.gw
@@ -351,7 +343,15 @@ func (m *Manager) EditMessage(ctx context.Context, id, payload string) error {
 	if gw == nil {
 		return fmt.Errorf("no gateway is currently running")
 	}
-	return gw.EditMessage(ctx, gwsdk.EditMessageRequest{MessageID: id, Payload: payload, MissionID: missionID, TaskID: taskID})
+	return gw.EditMessage(ctx, gwsdk.EditMessageRequest{MessageID: id, Payload: payload, Attachments: sdkAttachments(attachments), MissionID: missionID, TaskID: taskID})
+}
+
+func sdkAttachments(in []aitools.GatewayAttachment) []gwsdk.FileAttachment {
+	var out []gwsdk.FileAttachment
+	for _, a := range in {
+		out = append(out, gwsdk.FileAttachment{Filename: a.Filename, MimeType: a.MimeType, Content: a.Content})
+	}
+	return out
 }
 
 // MessageToolDescription returns the gateway-supplied post-tool description

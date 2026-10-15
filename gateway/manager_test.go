@@ -270,7 +270,7 @@ var _ = Describe("Manager.PostMessage", func() {
 })
 
 var _ = Describe("Manager.EditMessage", func() {
-	It("sends the id and payload with the calling run's mission and task", func() {
+	It("sends the id, payload and attachments with the calling run's mission and task", func() {
 		gw := &fakeGateway{}
 		s := &scriptedLauncher{results: []launchResult{{gw, &fakeSubprocess{}}}}
 		m := newTestManager(s.launcher())
@@ -278,16 +278,22 @@ var _ = Describe("Manager.EditMessage", func() {
 		DeferCleanup(m.Stop)
 
 		ctx := aitools.WithMissionContext(context.Background(), "run-1", "task-1")
-		Expect(m.EditMessage(ctx, "C1/1", `{"text":"done"}`)).To(Succeed())
+		Expect(m.EditMessage(ctx, "C1/1", `{"text":"done"}`, []aitools.GatewayAttachment{{Filename: "report.txt", MimeType: "text/plain", Content: []byte("hello")}})).To(Succeed())
 		gw.mu.Lock()
 		edited := append([]gwsdk.EditMessageRequest(nil), gw.edited...)
 		gw.mu.Unlock()
-		Expect(edited).To(ConsistOf(gwsdk.EditMessageRequest{MessageID: "C1/1", Payload: `{"text":"done"}`, MissionID: "run-1", TaskID: "task-1"}))
+		Expect(edited).To(ConsistOf(gwsdk.EditMessageRequest{
+			MessageID:   "C1/1",
+			Payload:     `{"text":"done"}`,
+			Attachments: []gwsdk.FileAttachment{{Filename: "report.txt", MimeType: "text/plain", Content: []byte("hello")}},
+			MissionID:   "run-1",
+			TaskID:      "task-1",
+		}))
 	})
 
 	It("errors when no gateway is running", func() {
 		m := newTestManager((&scriptedLauncher{}).launcher())
-		Expect(m.EditMessage(context.Background(), "C1/1", `{"text":"hi"}`)).To(MatchError(ContainSubstring("no gateway")))
+		Expect(m.EditMessage(context.Background(), "C1/1", `{"text":"hi"}`, nil)).To(MatchError(ContainSubstring("no gateway")))
 	})
 })
 

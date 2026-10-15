@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -37,6 +39,34 @@ var _ = Describe("GatewayEditTool", func() {
 		Expect(tool.Call(context.Background(), `{"id":"C1/1","text":"done","blocks":[{"type":"divider"}]}`)).To(Equal("Message C1/1 updated."))
 		Expect(bridge.editedID).To(Equal("C1/1"))
 		Expect(bridge.payload).To(MatchJSON(`{"text":"done","blocks":[{"type":"divider"}]}`))
+	})
+
+	It("resolves attachments like a post and strips them from the payload", func() {
+		dir := GinkgoT().TempDir()
+		Expect(os.WriteFile(filepath.Join(dir, "report.txt"), []byte("hello report"), 0o644)).To(Succeed())
+		bridge := &fakeGatewayBridge{}
+		tool := &aitools.GatewayEditTool{Bridge: bridge, Store: fakeMemStore{root: dir}}
+		Expect(tool.Call(context.Background(), `{"id":"C1/1","text":"done","attachments":[{"slot":"scratchpad","path":"report.txt"}]}`)).To(Equal("Message C1/1 updated."))
+		Expect(bridge.payload).To(MatchJSON(`{"text":"done"}`))
+		Expect(bridge.attachments).To(HaveLen(1))
+		Expect(bridge.attachments[0].Filename).To(Equal("report.txt"))
+		Expect(string(bridge.attachments[0].Content)).To(Equal("hello report"))
+	})
+
+	It("errors when attachments are requested but no store is available", func() {
+		bridge := &fakeGatewayBridge{}
+		tool := &aitools.GatewayEditTool{Bridge: bridge}
+		Expect(tool.Call(context.Background(), `{"id":"C1/1","text":"done","attachments":[{"slot":"memory","path":"x.txt"}]}`)).To(ContainSubstring("not available"))
+		Expect(bridge.editedID).To(BeEmpty())
+	})
+
+	It("advertises attachments only when a memory store is available", func() {
+		bridge := &fakeGatewayBridge{}
+		without := &aitools.GatewayEditTool{Bridge: bridge}
+		Expect(string(without.ToolPayloadSchema().ToJSONSchema())).NotTo(ContainSubstring("attachments"))
+		with := &aitools.GatewayEditTool{Bridge: bridge, Store: fakeMemStore{root: "/tmp"}}
+		Expect(string(with.ToolPayloadSchema().ToJSONSchema())).To(ContainSubstring("attachments"))
+		Expect(with.ToolDescription()).To(ContainSubstring("attachments"))
 	})
 
 	It("surfaces a gateway error to the agent", func() {

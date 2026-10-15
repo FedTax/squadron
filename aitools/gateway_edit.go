@@ -13,6 +13,7 @@ import (
 // schema, so whatever a post can say, an edit can say.
 type GatewayEditTool struct {
 	Bridge GatewayBridge
+	Store  MemoryStore
 }
 
 func (t *GatewayEditTool) ToolName() string { return "edit" }
@@ -22,18 +23,11 @@ const gatewayEditIDProperty = `{"type": "string", "description": "The id builtin
 func (t *GatewayEditTool) ToolDescription() string {
 	return "Replace the content of a message posted earlier with builtins.gateway.post. " +
 		"`id` is the id that post returned; the other fields are the new content, shaped as for builtins.gateway.post, and replace the whole message. " +
-		"If no gateway is configured, returns \"[no gateway configured]\" so you can proceed without failing."
+		gatewayPostDescription(t.Bridge, t.Store)
 }
 
 func (t *GatewayEditTool) ToolPayloadSchema() Schema {
-	raw := ""
-	if t.Bridge != nil {
-		raw = t.Bridge.MessageToolSchema()
-	}
-	if strings.TrimSpace(raw) == "" {
-		raw = defaultGatewayPostSchema
-	}
-	raw = injectProperty(raw, "id", gatewayEditIDProperty, true)
+	raw := injectProperty(gatewayPostSchema(t.Bridge, t.Store), "id", gatewayEditIDProperty, true)
 	return Schema{Type: TypeObject, Properties: PropertyMap{}}.WithRawJSONSchema(json.RawMessage(raw))
 }
 
@@ -59,11 +53,15 @@ func (t *GatewayEditTool) Call(ctx context.Context, params string) string {
 	if len(root) == 0 {
 		return "Error: empty message payload"
 	}
+	attachments, _, errMsg := takeAttachments(t.Store, root)
+	if errMsg != "" {
+		return "Error: " + errMsg
+	}
 	payload, err := json.Marshal(root)
 	if err != nil {
 		return "Error: " + err.Error()
 	}
-	if err := t.Bridge.EditMessage(ctx, id, string(payload)); err != nil {
+	if err := t.Bridge.EditMessage(ctx, id, string(payload), attachments); err != nil {
 		return "Error: " + err.Error()
 	}
 	return "Message " + id + " updated."

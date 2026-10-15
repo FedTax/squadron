@@ -28,9 +28,10 @@ func (f *fakeGatewayBridge) PostMessage(_ context.Context, payload string, attac
 	f.attachments = attachments
 	return f.postedID, f.err
 }
-func (f *fakeGatewayBridge) EditMessage(_ context.Context, id, payload string) error {
+func (f *fakeGatewayBridge) EditMessage(_ context.Context, id, payload string, attachments []aitools.GatewayAttachment) error {
 	f.editedID = id
 	f.payload = payload
+	f.attachments = attachments
 	return f.err
 }
 func (f *fakeGatewayBridge) MessageToolDescription() string { return f.desc }
