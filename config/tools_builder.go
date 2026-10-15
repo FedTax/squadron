@@ -189,6 +189,8 @@ func GetBuiltinTool(ref string, datasetStore aitools.DatasetStore, humanBridge a
 		return &aitools.GatewayPostTool{Bridge: gatewayBridge}
 	case "builtins.gateway.link":
 		return &aitools.GatewayLinkTool{Bridge: gatewayBridge}
+	case "builtins.gateway.edit":
+		return &aitools.GatewayEditTool{Bridge: gatewayBridge}
 	default:
 		return nil
 	}

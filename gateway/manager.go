@@ -36,9 +36,10 @@ type gatewayClient interface {
 	OnHumanInputRequested(ctx context.Context, rec gwsdk.HumanInputRecord) error
 	OnHumanInputResolved(ctx context.Context, rec gwsdk.HumanInputRecord) error
 	OnNotification(ctx context.Context, rec gwsdk.NotificationRecord) error
-	PostMessage(ctx context.Context, req gwsdk.PostMessageRequest) error
+	PostMessage(ctx context.Context, req gwsdk.PostMessageRequest) (gwsdk.PostMessageResponse, error)
 	MessageToolSpec(ctx context.Context) (gwsdk.MessageToolSpec, error)
 	Link(ctx context.Context, req gwsdk.LinkRequest) error
+	EditMessage(ctx context.Context, req gwsdk.EditMessageRequest) error
 	Shutdown(ctx context.Context) error
 }
 
@@ -306,14 +307,14 @@ func (m *Manager) Notify(ctx context.Context, rec gwsdk.NotificationRecord) erro
 
 // PostMessage forwards the raw, gateway-schema-shaped payload to the running
 // gateway. Returns an error (surfaced to the calling agent) when no gateway is
-// up. Satisfies aitools.GatewayBridge.
-func (m *Manager) PostMessage(ctx context.Context, payload string, attachments []aitools.GatewayAttachment) error {
+// up. Returns the posted message's ID. Satisfies aitools.GatewayBridge.
+func (m *Manager) PostMessage(ctx context.Context, payload string, attachments []aitools.GatewayAttachment) (string, error) {
 	missionID, taskID := aitools.MissionContextFromContext(ctx)
 	m.mu.Lock()
 	gw := m.gw
 	m.mu.Unlock()
 	if gw == nil {
-		return fmt.Errorf("no gateway is currently running")
+		return "", fmt.Errorf("no gateway is currently running")
 	}
 	req := gwsdk.PostMessageRequest{Payload: payload, MissionID: missionID, TaskID: taskID}
 	for _, a := range attachments {
@@ -323,7 +324,8 @@ func (m *Manager) PostMessage(ctx context.Context, payload string, attachments [
 			Content:  a.Content,
 		})
 	}
-	return gw.PostMessage(ctx, req)
+	resp, err := gw.PostMessage(ctx, req)
+	return resp.MessageID, err
 }
 
 // Link asks the running gateway to join the calling run to the request it
@@ -337,6 +339,19 @@ func (m *Manager) Link(ctx context.Context, key string) error {
 		return fmt.Errorf("no gateway is currently running")
 	}
 	return gw.Link(ctx, gwsdk.LinkRequest{Key: key, MissionID: missionID, TaskID: taskID})
+}
+
+// EditMessage asks the running gateway to replace the message id names with
+// payload. Satisfies aitools.GatewayBridge.
+func (m *Manager) EditMessage(ctx context.Context, id, payload string) error {
+	missionID, taskID := aitools.MissionContextFromContext(ctx)
+	m.mu.Lock()
+	gw := m.gw
+	m.mu.Unlock()
+	if gw == nil {
+		return fmt.Errorf("no gateway is currently running")
+	}
+	return gw.EditMessage(ctx, gwsdk.EditMessageRequest{MessageID: id, Payload: payload, MissionID: missionID, TaskID: taskID})
 }
 
 // MessageToolDescription returns the gateway-supplied post-tool description

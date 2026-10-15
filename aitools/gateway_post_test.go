@@ -19,11 +19,18 @@ type fakeGatewayBridge struct {
 	desc        string
 	schema      string
 	linkedKey   string
+	postedID    string
+	editedID    string
 }
 
-func (f *fakeGatewayBridge) PostMessage(_ context.Context, payload string, attachments []aitools.GatewayAttachment) error {
+func (f *fakeGatewayBridge) PostMessage(_ context.Context, payload string, attachments []aitools.GatewayAttachment) (string, error) {
 	f.payload = payload
 	f.attachments = attachments
+	return f.postedID, f.err
+}
+func (f *fakeGatewayBridge) EditMessage(_ context.Context, id, payload string) error {
+	f.editedID = id
+	f.payload = payload
 	return f.err
 }
 func (f *fakeGatewayBridge) MessageToolDescription() string { return f.desc }
@@ -59,6 +66,12 @@ var _ = Describe("GatewayPostTool", func() {
 		out := t.Call(context.Background(), payload)
 		Expect(out).To(ContainSubstring("posted"))
 		Expect(b.payload).To(Equal(payload))
+	})
+
+	It("tells the agent the posted message's id when the gateway returns one", func() {
+		b := &fakeGatewayBridge{postedID: "C1/1700000000.000001"}
+		t := &aitools.GatewayPostTool{Bridge: b}
+		Expect(t.Call(context.Background(), `{"text":"hi"}`)).To(ContainSubstring("Its id is C1/1700000000.000001"))
 	})
 
 	It("surfaces a bridge error to the agent", func() {

@@ -19,8 +19,9 @@ type GatewayBridge interface {
 	// PostMessage forwards the raw, gateway-schema-shaped JSON the agent
 	// produced (text + rich layout) plus any squadron-resolved file
 	// attachments. The gateway parses the payload and uploads the attachment
-	// bytes directly.
-	PostMessage(ctx context.Context, payload string, attachments []GatewayAttachment) error
+	// bytes directly. Returns the posted message's ID, empty when the gateway
+	// doesn't identify messages.
+	PostMessage(ctx context.Context, payload string, attachments []GatewayAttachment) (string, error)
 	// MessageToolDescription is the gateway-supplied tool description (how to
 	// format messages for this gateway). Empty → squadron's default.
 	MessageToolDescription() string
@@ -29,6 +30,9 @@ type GatewayBridge interface {
 	MessageToolSchema() string
 	// Link joins the calling run to the request the gateway holds under key.
 	Link(ctx context.Context, key string) error
+	// EditMessage replaces the message id names (an ID PostMessage returned)
+	// with payload, shaped like a post's payload.
+	EditMessage(ctx context.Context, id, payload string) error
 }
 
 // GatewayAttachment is a squadron-local file resolved from the mission's
@@ -125,6 +129,13 @@ func (t *GatewayPostTool) ToolPayloadSchema() Schema {
 // gateway-owned schema. Best-effort: if the schema can't be parsed or already
 // defines `attachments`, it is returned unchanged.
 func injectAttachmentsProperty(schema string) string {
+	return injectProperty(schema, "attachments", attachmentsSchemaProperty, false)
+}
+
+// injectProperty adds a squadron-owned property to a gateway-owned schema,
+// listing it under `required` when required is set. Best-effort: if the
+// schema can't be parsed or already defines name, it is returned unchanged.
+func injectProperty(schema, name, property string, required bool) string {
 	var root map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(schema), &root); err != nil {
 		return schema
@@ -135,15 +146,28 @@ func injectAttachmentsProperty(schema string) string {
 			return schema
 		}
 	}
-	if _, exists := props["attachments"]; exists {
+	if _, exists := props[name]; exists {
 		return schema
 	}
-	props["attachments"] = json.RawMessage(attachmentsSchemaProperty)
+	props[name] = json.RawMessage(property)
 	newProps, err := json.Marshal(props)
 	if err != nil {
 		return schema
 	}
 	root["properties"] = newProps
+	if required {
+		var names []string
+		if rawRequired, ok := root["required"]; ok {
+			if err := json.Unmarshal(rawRequired, &names); err != nil {
+				return schema
+			}
+		}
+		newRequired, err := json.Marshal(append(names, name))
+		if err != nil {
+			return schema
+		}
+		root["required"] = newRequired
+	}
 	out, err := json.Marshal(root)
 	if err != nil {
 		return schema
@@ -192,10 +216,14 @@ func (t *GatewayPostTool) Call(ctx context.Context, params string) string {
 		payload = string(rest)
 	}
 
-	if err := t.Bridge.PostMessage(ctx, payload, attachments); err != nil {
+	id, err := t.Bridge.PostMessage(ctx, payload, attachments)
+	if err != nil {
 		return "Error: " + err.Error()
 	}
-	return "Message posted to the gateway."
+	if id == "" {
+		return "Message posted to the gateway."
+	}
+	return "Message posted to the gateway. Its id is " + id + "; pass it to builtins.gateway.edit to change this message."
 }
 
 func (t *GatewayPostTool) resolveAttachments(refs []gatewayAttachmentRef) ([]GatewayAttachment, string) {
