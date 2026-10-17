@@ -6,11 +6,7 @@ import (
 	"strings"
 )
 
-// GatewayEditTool backs builtins.gateway.edit. A run that reports progress in
-// one message (a status line, a checklist) can change that message instead
-// of posting a new one each time, so the conversation shows the current
-// state rather than every step. The replacement uses the gateway's own post
-// schema, so whatever a post can say, an edit can say.
+// GatewayEditTool replaces a posted message using the gateway's message schema.
 type GatewayEditTool struct {
 	Bridge GatewayBridge
 	Store  MemoryStore

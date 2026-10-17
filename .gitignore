@@ -20,5 +20,3 @@ squadron
 .squadron/
 stories/
 /plugin_*
-# Local mission transcripts, databases, and build outputs
-.local-testing/

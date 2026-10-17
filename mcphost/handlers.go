@@ -870,10 +870,8 @@ func (h *handlers) mcpRefresh(ctx context.Context, req mcp.CallToolRequest) (*mc
 	})
 }
 
-// missionInputJSON reports an input with its required flag and default
-// spelled out. config.MissionInput keeps the default as a cty.Value, which
-// isn't serialised, so "config" alone can't tell a client which inputs it
-// must supply.
+// missionInputJSON exposes required flags and JSON defaults omitted from
+// config.MissionInput serialization.
 type missionInputJSON struct {
 	Name        string             `json:"name"`
 	Type        string             `json:"type"`
@@ -893,8 +891,8 @@ func missionInputsJSON(inputs []config.MissionInput) []missionInputJSON {
 	return out
 }
 
-// missionInputToJSON matches the command center's rule for required, and
-// never reports a protected input's default, which holds a secret.
+// missionInputToJSON uses the command center's required-input rule and
+// omits defaults for protected inputs.
 func missionInputToJSON(inp config.MissionInput) missionInputJSON {
 	j := missionInputJSON{
 		Name:        inp.Name,

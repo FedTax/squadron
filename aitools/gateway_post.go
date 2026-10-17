@@ -30,8 +30,8 @@ type GatewayBridge interface {
 	MessageToolSchema() string
 	// Link joins the calling run to the request the gateway holds under key.
 	Link(ctx context.Context, key string) error
-	// EditMessage replaces the message id names (an ID PostMessage returned)
-	// with payload and attachments, shaped like a post's.
+	// EditMessage replaces the message identified by an ID returned from
+	// PostMessage, using the same payload and attachment format.
 	EditMessage(ctx context.Context, id, payload string, attachments []GatewayAttachment) error
 }
 

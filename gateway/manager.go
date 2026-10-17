@@ -333,8 +333,8 @@ func (m *Manager) Link(ctx context.Context, key string) error {
 	return gw.Link(ctx, gwsdk.LinkRequest{Key: key, MissionID: missionID, TaskID: taskID})
 }
 
-// EditMessage asks the running gateway to replace the message id names with
-// payload. Satisfies aitools.GatewayBridge.
+// EditMessage replaces the message identified by id through the running gateway.
+// Satisfies aitools.GatewayBridge.
 func (m *Manager) EditMessage(ctx context.Context, id, payload string, attachments []aitools.GatewayAttachment) error {
 	missionID, taskID := aitools.MissionContextFromContext(ctx)
 	m.mu.Lock()

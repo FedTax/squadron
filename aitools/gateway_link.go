@@ -6,11 +6,8 @@ import (
 	"strings"
 )
 
-// GatewayLinkTool backs builtins.gateway.link. A gateway that groups messages
-// by request (e.g. a Slack thread per ticket) can only place a run's
-// questions and notifications by the run, and those carry no request key.
-// Linking first lets a run whose first message is a question still land in
-// the request it belongs to, rather than opening a separate one.
+// GatewayLinkTool associates the calling run with a gateway request key
+// so subsequent questions, notifications, and posts share the same request.
 type GatewayLinkTool struct {
 	Bridge GatewayBridge
 }
