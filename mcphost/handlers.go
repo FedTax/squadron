@@ -170,7 +170,8 @@ func (h *handlers) runMission(_ context.Context, req mcp.CallToolRequest) (*mcp.
 		return mcp.NewToolResultError("mission execution not available"), nil
 	}
 
-	missionID, err := h.deps.RunMission(name, inputs)
+	threadID, _ := req.GetArguments()["thread_id"].(string)
+	missionID, threadID, err := h.deps.RunMission(name, inputs, threadID)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("failed to start mission: %v", err)), nil
 	}
@@ -178,6 +179,7 @@ func (h *handlers) runMission(_ context.Context, req mcp.CallToolRequest) (*mcp.
 	return toolResult(map[string]any{
 		"accepted":  true,
 		"missionId": missionID,
+		"threadId":  threadID,
 	})
 }
 
@@ -215,6 +217,7 @@ func (h *handlers) listRuns(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 
 	type runSummary struct {
+		ThreadID    string           `json:"threadId"`
 		ID          string           `json:"id"`
 		MissionName string           `json:"missionName"`
 		Status      string           `json:"status"`
@@ -236,6 +239,7 @@ func (h *handlers) listRuns(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		}
 
 		runs = append(runs, runSummary{
+			ThreadID:    r.ThreadID,
 			ID:          r.ID,
 			MissionName: r.MissionName,
 			Status:      r.Status,
@@ -319,6 +323,7 @@ func (h *handlers) getRunDetails(_ context.Context, req mcp.CallToolRequest) (*m
 	return toolResult(map[string]any{
 		"id":          record.ID,
 		"missionName": record.MissionName,
+		"threadId":    record.ThreadID,
 		"status":      record.Status,
 		"startedAt":   record.StartedAt,
 		"finishedAt":  record.FinishedAt,
@@ -350,6 +355,7 @@ func (h *handlers) getRunConfig(_ context.Context, req mcp.CallToolRequest) (*mc
 	return toolResult(map[string]any{
 		"id":          record.ID,
 		"missionName": record.MissionName,
+		"threadId":    record.ThreadID,
 		"config":      config,
 	})
 }

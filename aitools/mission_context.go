@@ -25,3 +25,16 @@ func MissionContextFromContext(ctx context.Context) (missionID, taskID string) {
 	mc, _ := ctx.Value(missionContextKey{}).(missionContext)
 	return mc.missionID, mc.taskID
 }
+
+type missionThreadContextKey struct{}
+
+// WithMissionThread identifies the mission thread (chain of related runs)
+// whose shared conversation receives this execution's gateway messages.
+func WithMissionThread(ctx context.Context, threadID string) context.Context {
+	return context.WithValue(ctx, missionThreadContextKey{}, threadID)
+}
+
+func MissionThreadFromContext(ctx context.Context) string {
+	threadID, _ := ctx.Value(missionThreadContextKey{}).(string)
+	return threadID
+}

@@ -276,11 +276,11 @@ func runEngage(cmd *cobra.Command, args []string) {
 				return sharedClient.GetConfig()
 			},
 			Stores: func() *store.Bundle { return sharedStores },
-			RunMission: func(name string, inputs map[string]string) (string, error) {
+			RunMission: func(name string, inputs map[string]string, threadID string) (string, string, error) {
 				if sharedClient == nil {
-					return "", fmt.Errorf("squadron is still starting up")
+					return "", "", fmt.Errorf("squadron is still starting up")
 				}
-				return sharedClient.RunMissionDirect(name, inputs)
+				return sharedClient.RunMissionDirect(name, inputs, threadID)
 			},
 			ReloadConfig: func() error {
 				if sharedClient == nil {

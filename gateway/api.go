@@ -28,7 +28,11 @@ func (a *squadronAPI) ListHumanInputs(ctx context.Context, filter gwsdk.HumanInp
 	}
 	out := make([]gwsdk.HumanInputRecord, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, storeRecordToSDK(r))
+		rec, err := storeRecordToSDK(r, a.stores)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, rec)
 	}
 	return out, total, nil
 }
@@ -38,8 +42,12 @@ func (a *squadronAPI) ResolveHumanInput(ctx context.Context, toolCallID, respons
 	if err != nil {
 		return gwsdk.ResolveResult{}, err
 	}
+	rec, err := storeRecordToSDK(out.Record, a.stores)
+	if err != nil {
+		return gwsdk.ResolveResult{}, err
+	}
 	return gwsdk.ResolveResult{
-		Record:          storeRecordToSDK(out.Record),
+		Record:          rec,
 		AlreadyResolved: out.AlreadyResolved,
 		NotFound:        out.NotFound,
 	}, nil

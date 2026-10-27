@@ -121,4 +121,4 @@ require (
 	modernc.org/memory v1.11.0 // indirect
 )
 
-replace github.com/mlund01/squadron-gateway-sdk => github.com/FedTax/squadron-gateway-sdk v0.0.0-20261015162040-5fbd29cba82a
+replace github.com/mlund01/squadron-gateway-sdk => github.com/FedTax/squadron-gateway-sdk v0.0.0-20261027155636-db3ce0558426

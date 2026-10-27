@@ -8,8 +8,8 @@ github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 h1:/vQbFIOMb
 github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4/go.mod h1:hN7oaIRCjzsZ2dE+yG5k+rsdt3qcwykqK6HVGcKwsw4=
 github.com/99designs/keyring v1.2.2 h1:pZd3neh/EmUzWONb35LxQfvuY7kiSXAq3HQd97+XBn0=
 github.com/99designs/keyring v1.2.2/go.mod h1:wes/FrByc8j7lFOAGLGSNEg8f/PaI3cgTBqhFkHUrPk=
-github.com/FedTax/squadron-gateway-sdk v0.0.0-20261015162040-5fbd29cba82a h1:wYCBuqLxugdAM3IuUGgLLYto3xeG0541E2hm+3Q0Jrk=
-github.com/FedTax/squadron-gateway-sdk v0.0.0-20261015162040-5fbd29cba82a/go.mod h1:G1TD///Cn18dz6LDELlYuwnavrzMAMnVVrW2hO6jkkw=
+github.com/FedTax/squadron-gateway-sdk v0.0.0-20261027155636-db3ce0558426 h1:K7E47p7ElSrim09D2oE2LIzoRnX99qvXoRjNPjHVkOc=
+github.com/FedTax/squadron-gateway-sdk v0.0.0-20261027155636-db3ce0558426/go.mod h1:G1TD///Cn18dz6LDELlYuwnavrzMAMnVVrW2hO6jkkw=
 github.com/Masterminds/semver/v3 v3.4.0 h1:Zog+i5UMtVoCU8oKka5P7i9q9HgrJeGzI9SA1Xbatp0=
 github.com/Masterminds/semver/v3 v3.4.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/agext/levenshtein v1.2.1 h1:QmvMAjj2aEICytGiWzmxoE0x2KZvE0fvmqMOfy2tjT8=

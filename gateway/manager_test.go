@@ -28,10 +28,10 @@ func TestGatewayManager(t *testing.T) {
 // calls Exited() to decide whether to restart; tests flip the bool to
 // simulate a crash. Kill is recorded so tests can assert teardown.
 type fakeSubprocess struct {
-	mu       sync.Mutex
-	exited   bool
-	killed   bool
-	killCnt  int
+	mu      sync.Mutex
+	exited  bool
+	killed  bool
+	killCnt int
 }
 
 func (f *fakeSubprocess) Exited() bool {
@@ -64,15 +64,15 @@ func (f *fakeSubprocess) wasKilled() bool {
 // assert event dispatch + Configure happened. Errors can be injected
 // via configureErr / configureCalls.
 type fakeGateway struct {
-	mu             sync.Mutex
-	configureErr   error
+	mu                sync.Mutex
+	configureErr      error
 	configureCalls    int
 	requested         []string
 	resolved          []string
 	notified          []string
 	posted            []string
+	postedRequests    []gwsdk.PostMessageRequest
 	postedAttachments []gwsdk.FileAttachment
-	linked            []gwsdk.LinkRequest
 	edited            []gwsdk.EditMessageRequest
 	shutdowns         int
 }
@@ -109,6 +109,7 @@ func (g *fakeGateway) OnNotification(ctx context.Context, rec gwsdk.Notification
 func (g *fakeGateway) PostMessage(ctx context.Context, req gwsdk.PostMessageRequest) (gwsdk.PostMessageResponse, error) {
 	g.mu.Lock()
 	g.posted = append(g.posted, req.Payload)
+	g.postedRequests = append(g.postedRequests, req)
 	g.postedAttachments = req.Attachments
 	g.mu.Unlock()
 	return gwsdk.PostMessageResponse{MessageID: "posted-1"}, nil
@@ -123,13 +124,6 @@ func (g *fakeGateway) EditMessage(ctx context.Context, req gwsdk.EditMessageRequ
 
 func (g *fakeGateway) MessageToolSpec(ctx context.Context) (gwsdk.MessageToolSpec, error) {
 	return gwsdk.MessageToolSpec{Description: "fake gateway", ParamsSchema: `{"type":"object"}`}, nil
-}
-
-func (g *fakeGateway) Link(ctx context.Context, req gwsdk.LinkRequest) error {
-	g.mu.Lock()
-	g.linked = append(g.linked, req)
-	g.mu.Unlock()
-	return nil
 }
 
 func (g *fakeGateway) Shutdown(ctx context.Context) error {
@@ -277,7 +271,7 @@ var _ = Describe("Manager.EditMessage", func() {
 		Expect(m.Start(context.Background(), Config{Name: "slack", Version: "local"})).To(Succeed())
 		DeferCleanup(m.Stop)
 
-		ctx := aitools.WithMissionContext(context.Background(), "run-1", "task-1")
+		ctx := aitools.WithMissionContext(aitools.WithMissionThread(context.Background(), "chain-1"), "run-1", "task-1")
 		Expect(m.EditMessage(ctx, "C1/1", `{"text":"done"}`, []aitools.GatewayAttachment{{Filename: "report.txt", MimeType: "text/plain", Content: []byte("hello")}})).To(Succeed())
 		gw.mu.Lock()
 		edited := append([]gwsdk.EditMessageRequest(nil), gw.edited...)
@@ -287,6 +281,7 @@ var _ = Describe("Manager.EditMessage", func() {
 			Payload:     `{"text":"done"}`,
 			Attachments: []gwsdk.FileAttachment{{Filename: "report.txt", MimeType: "text/plain", Content: []byte("hello")}},
 			MissionID:   "run-1",
+			ThreadID:    "chain-1",
 			TaskID:      "task-1",
 		}))
 	})
@@ -294,28 +289,6 @@ var _ = Describe("Manager.EditMessage", func() {
 	It("errors when no gateway is running", func() {
 		m := newTestManager((&scriptedLauncher{}).launcher())
 		Expect(m.EditMessage(context.Background(), "C1/1", `{"text":"hi"}`, nil)).To(MatchError(ContainSubstring("no gateway")))
-	})
-})
-
-var _ = Describe("Manager.Link", func() {
-	It("sends the key with the calling run's mission and task", func() {
-		gw := &fakeGateway{}
-		s := &scriptedLauncher{results: []launchResult{{gw, &fakeSubprocess{}}}}
-		m := newTestManager(s.launcher())
-		Expect(m.Start(context.Background(), Config{Name: "slack", Version: "local"})).To(Succeed())
-		DeferCleanup(m.Stop)
-
-		ctx := aitools.WithMissionContext(context.Background(), "run-1", "task-1")
-		Expect(m.Link(ctx, "DEV-123")).To(Succeed())
-		gw.mu.Lock()
-		linked := append([]gwsdk.LinkRequest(nil), gw.linked...)
-		gw.mu.Unlock()
-		Expect(linked).To(ConsistOf(gwsdk.LinkRequest{Key: "DEV-123", MissionID: "run-1", TaskID: "task-1"}))
-	})
-
-	It("errors when no gateway is running", func() {
-		m := newTestManager((&scriptedLauncher{}).launcher())
-		Expect(m.Link(context.Background(), "DEV-123")).To(MatchError(ContainSubstring("no gateway")))
 	})
 })
 
@@ -520,3 +493,33 @@ var _ = Describe("Manager event dispatch", func() {
 		}, time.Second, 10*time.Millisecond).Should(ConsistOf("tc-2"))
 	})
 })
+
+func TestPostKeepsThreadWhenAgentStampsRunContext(t *testing.T) {
+	gw := &fakeGateway{}
+	s := &scriptedLauncher{results: []launchResult{{gw, &fakeSubprocess{}}}}
+	bundle, err := store.NewSQLiteBundle(filepath.Join(t.TempDir(), "gateway.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bundle.Close()
+	m := NewManager(bundle, humaninput.New(), nil)
+	m.launch = s.launcher()
+	if err := m.Start(context.Background(), Config{Name: "slack", Version: "local"}); err != nil {
+		t.Fatal(err)
+	}
+	defer m.Stop()
+	ctx := aitools.WithMissionThread(context.Background(), "chain-1")
+	ctx = aitools.WithMissionContext(ctx, "run-1", "task-1")
+	if _, err := m.PostMessage(ctx, `{"text":"hi"}`, nil); err != nil {
+		t.Fatal(err)
+	}
+	gw.mu.Lock()
+	defer gw.mu.Unlock()
+	if len(gw.postedRequests) != 1 {
+		t.Fatalf("posts: %v", gw.postedRequests)
+	}
+	got := gw.postedRequests[0]
+	if got.ThreadID != "chain-1" || got.MissionID != "run-1" || got.TaskID != "task-1" {
+		t.Fatalf("identity: %+v", got)
+	}
+}

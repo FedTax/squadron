@@ -385,7 +385,7 @@ func TestClientHandlesGetMissions(t *testing.T) {
 
 
 	// Create some mission records in the store
-	stores.Missions.CreateMission("search-mission", `{"query": "test"}`, `{}`)
+	stores.Missions.CreateMission("search-mission", "test-thread", `{"query": "test"}`, `{}`)
 
 	client := wsbridge.NewClient(cfg, true, "", ".", stores, "1.0.0")
 
