@@ -897,8 +897,8 @@ func missionInputsJSON(inputs []config.MissionInput) []missionInputJSON {
 	return out
 }
 
-// missionInputToJSON uses the command center's required-input rule and
-// omits defaults for protected inputs.
+// missionInputToJSON marks inputs required when they have no default and
+// are unprotected. Protected input defaults are omitted from the response.
 func missionInputToJSON(inp config.MissionInput) missionInputJSON {
 	j := missionInputJSON{
 		Name:        inp.Name,

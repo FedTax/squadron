@@ -130,13 +130,13 @@ func WithDebugLogger(logger *DebugLogger) RunnerOption {
 	}
 }
 
-// WithThreadID joins a mission thread: a chain of related mission runs.
-// An empty ID starts a new thread; resuming restores the stored thread.
+// WithThreadID assigns this run to a mission thread: a chain of related runs.
+// New runs generate an ID when empty; resumed runs retain their stored ID.
 func WithThreadID(threadID string) RunnerOption {
 	return func(r *Runner) { r.threadID = threadID }
 }
 
-// ThreadID identifies the shared mission thread, while each run retains its own mission ID.
+// ThreadID identifies the mission thread containing this run.
 func (r *Runner) ThreadID() string { return r.threadID }
 
 // WithResume configures the runner to resume a previously failed mission

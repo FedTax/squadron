@@ -18,7 +18,7 @@ import (
 
 // Record is a single mission-lifecycle notification.
 type Record struct {
-	// ThreadID identifies the mission chain sharing the gateway conversation.
+	// ThreadID identifies the mission thread containing the notifying run.
 	ThreadID    string
 	MissionID   string
 	MissionName string

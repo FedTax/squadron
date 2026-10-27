@@ -304,9 +304,8 @@ func (m *Manager) Notify(ctx context.Context, rec gwsdk.NotificationRecord) erro
 	return gw.OnNotification(ctx, rec)
 }
 
-// PostMessage forwards the raw, gateway-schema-shaped payload to the running
-// gateway. Returns an error (surfaced to the calling agent) when no gateway is
-// up. Returns the posted message's ID. Satisfies aitools.GatewayBridge.
+// PostMessage forwards the payload and attachments to the running gateway
+// and returns the message ID. It returns an error when no gateway is running.
 func (m *Manager) PostMessage(ctx context.Context, payload string, attachments []aitools.GatewayAttachment) (string, error) {
 	missionID, taskID := aitools.MissionContextFromContext(ctx)
 	m.mu.Lock()
@@ -319,8 +318,8 @@ func (m *Manager) PostMessage(ctx context.Context, payload string, attachments [
 	return resp.MessageID, err
 }
 
-// EditMessage replaces the message identified by id through the running gateway.
-// Satisfies aitools.GatewayBridge.
+// EditMessage replaces the identified message through the running gateway.
+// It returns an error when no gateway is running.
 func (m *Manager) EditMessage(ctx context.Context, id, payload string, attachments []aitools.GatewayAttachment) error {
 	missionID, taskID := aitools.MissionContextFromContext(ctx)
 	m.mu.Lock()

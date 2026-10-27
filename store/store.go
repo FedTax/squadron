@@ -78,7 +78,8 @@ type MissionTask struct {
 
 // MissionRecord represents a mission row
 type MissionRecord struct {
-	// ThreadID groups a mission thread: a chain of related runs sharing a conversation.
+	// ThreadID identifies the mission thread containing this run.
+	// A mission thread is a chain of related mission runs.
 	ThreadID        string     `json:"threadId"`
 	ID              string     `json:"id"`
 	MissionName     string     `json:"missionName"`

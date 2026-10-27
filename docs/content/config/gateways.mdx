@@ -64,13 +64,12 @@ keep those runs in one conversation. Automatic mission routing inherits the ID,
 and resume retains it. A separate start can join by supplying `--thread-id` on
 the CLI or `thread_id` through MCP `run_mission`.
 
-Each run retains its `MissionID` for its run URL and question ownership. Agents
-do not choose routing keys in their post payload or call a linking tool.
+Each run retains its `MissionID` for its run URL and question ownership.
 
 For Slack, `root: true` replaces the complete conversation root while preserving
 the gateway's starter mission and requester lines. To compose later replacements,
-missions can save shared content in a configured memory. Sharing a thread ID
-does not itself share memory or return the previous message content.
+missions can save shared content in a configured memory. Memory sharing is
+configured separately from the mission thread.
 
 ## Fields
 

@@ -16,11 +16,8 @@ import (
 // Pass nil to build a tool that reports the gateway is unavailable instead of
 // posting — the tool is always registered.
 type GatewayBridge interface {
-	// PostMessage forwards the raw, gateway-schema-shaped JSON the agent
-	// produced (text + rich layout) plus any squadron-resolved file
-	// attachments. The gateway parses the payload and uploads the attachment
-	// bytes directly. Returns the posted message's ID, empty when the gateway
-	// doesn't identify messages.
+	// PostMessage forwards the payload and attachments to the gateway and
+	// returns the message ID. The ID is empty when the gateway omits it.
 	PostMessage(ctx context.Context, payload string, attachments []GatewayAttachment) (string, error)
 	// MessageToolDescription is the gateway-supplied tool description (how to
 	// format messages for this gateway). Empty → squadron's default.
@@ -138,9 +135,8 @@ func injectAttachmentsProperty(schema string) string {
 	return injectProperty(schema, "attachments", attachmentsSchemaProperty, false)
 }
 
-// injectProperty adds a squadron-owned property to a gateway-owned schema,
-// listing it under `required` when required is set. Best-effort: if the
-// schema can't be parsed or already defines name, it is returned unchanged.
+// injectProperty adds a property to the schema and marks it required when requested.
+// It returns the original schema if parsing fails or the property already exists.
 func injectProperty(schema, name, property string, required bool) string {
 	var root map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(schema), &root); err != nil {
@@ -222,10 +218,8 @@ func (t *GatewayPostTool) Call(ctx context.Context, params string) string {
 	return "Message posted to the gateway. Its id is " + id + "; pass it to builtins.gateway.edit to change this message."
 }
 
-// takeAttachments removes `attachments` from a post or edit payload and
-// resolves it against the mission's local file storage; the gateway never
-// sees the references, only bytes. found reports whether the payload had
-// the field.
+// takeAttachments removes the attachments field from the payload and reads
+// the referenced files from local storage. found reports whether the field was present.
 func takeAttachments(store MemoryStore, root map[string]json.RawMessage) (attachments []GatewayAttachment, found bool, errMsg string) {
 	rawAtt, ok := root["attachments"]
 	if !ok {
