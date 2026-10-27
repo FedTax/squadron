@@ -58,6 +58,8 @@ type launcher func(ctx context.Context, cfg Config, host *gwsdk.HostPlugin) (gat
 // singleton (one gateway block per config) so we hold a single client
 // rather than a registry.
 type Manager struct {
+	// RunURL resolves links for outgoing run records. Set before Start.
+	RunURL   func(string) string
 	stores   *store.Bundle
 	notifier *humaninput.Notifier
 	listener humaninput.Listener
@@ -134,6 +136,7 @@ func (m *Manager) launchLocked(ctx context.Context, cfg Config) error {
 		stores:   m.stores,
 		notifier: m.notifier,
 		listener: m.listener,
+		runURL:   m.RunURL,
 	}}
 
 	gw, proc, err := m.launch(ctx, cfg, host)
@@ -301,6 +304,7 @@ func (m *Manager) Notify(ctx context.Context, rec gwsdk.NotificationRecord) erro
 	if gw == nil {
 		return nil
 	}
+	rec.RunURL = missionURL(m.RunURL, rec.MissionID)
 	return gw.OnNotification(ctx, rec)
 }
 
@@ -314,7 +318,7 @@ func (m *Manager) PostMessage(ctx context.Context, payload string, attachments [
 	if gw == nil {
 		return "", fmt.Errorf("no gateway is currently running")
 	}
-	resp, err := gw.PostMessage(ctx, gwsdk.PostMessageRequest{Payload: payload, Attachments: sdkAttachments(attachments), MissionID: missionID, TaskID: taskID, ThreadID: aitools.MissionThreadFromContext(ctx)})
+	resp, err := gw.PostMessage(ctx, gwsdk.PostMessageRequest{Payload: payload, Attachments: sdkAttachments(attachments), RunURL: missionURL(m.RunURL, missionID), MissionID: missionID, TaskID: taskID, ThreadID: aitools.MissionThreadFromContext(ctx)})
 	return resp.MessageID, err
 }
 
@@ -328,7 +332,7 @@ func (m *Manager) EditMessage(ctx context.Context, id, payload string, attachmen
 	if gw == nil {
 		return fmt.Errorf("no gateway is currently running")
 	}
-	return gw.EditMessage(ctx, gwsdk.EditMessageRequest{MessageID: id, Payload: payload, Attachments: sdkAttachments(attachments), MissionID: missionID, TaskID: taskID, ThreadID: aitools.MissionThreadFromContext(ctx)})
+	return gw.EditMessage(ctx, gwsdk.EditMessageRequest{MessageID: id, Payload: payload, Attachments: sdkAttachments(attachments), RunURL: missionURL(m.RunURL, missionID), MissionID: missionID, TaskID: taskID, ThreadID: aitools.MissionThreadFromContext(ctx)})
 }
 
 func sdkAttachments(in []aitools.GatewayAttachment) []gwsdk.FileAttachment {
@@ -372,6 +376,7 @@ func (m *Manager) dispatch(ctx context.Context, ev humaninput.Event) {
 		log.Printf("gateway question: %v", err)
 		return
 	}
+	rec.RunURL = missionURL(m.RunURL, rec.MissionID)
 	switch ev.Kind {
 	case humaninput.EventKindCreated:
 		if err := gw.OnHumanInputRequested(ctx, rec); err != nil {

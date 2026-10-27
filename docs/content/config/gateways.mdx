@@ -65,6 +65,11 @@ and resume retains it. A separate start can join by supplying `--thread-id` on
 the CLI or `thread_id` through MCP `run_mission`.
 
 Each run retains its `MissionID` for its run URL and question ownership.
+Squadron supplies `RunURL` on posts, edits, questions and notifications after
+command-center registration. It builds the link from the connected address and
+assigned instance ID using `/instances/{instanceID}/runs/{missionID}`. Before
+registration and in headless mode, the URL is empty. A local command center
+produces a localhost link, usable on the machine running Squadron.
 
 Missions can save shared content in a configured [memory](/missions/memory)
 to compose later updates. Memory sharing is configured separately from the

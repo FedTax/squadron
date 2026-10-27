@@ -176,7 +176,12 @@ func (h *handlers) runMission(_ context.Context, req mcp.CallToolRequest) (*mcp.
 		return mcp.NewToolResultError(fmt.Sprintf("failed to start mission: %v", err)), nil
 	}
 
+	runURL := ""
+	if h.deps.RunURL != nil {
+		runURL = h.deps.RunURL(missionID)
+	}
 	return toolResult(map[string]any{
+		"runUrl":    runURL,
 		"accepted":  true,
 		"missionId": missionID,
 		"threadId":  threadID,

@@ -268,6 +268,7 @@ var _ = Describe("Manager.EditMessage", func() {
 		gw := &fakeGateway{}
 		s := &scriptedLauncher{results: []launchResult{{gw, &fakeSubprocess{}}}}
 		m := newTestManager(s.launcher())
+		m.RunURL = func(id string) string { return "https://cc.example/instances/1/runs/" + id }
 		Expect(m.Start(context.Background(), Config{Name: "slack", Version: "local"})).To(Succeed())
 		DeferCleanup(m.Stop)
 
@@ -277,6 +278,7 @@ var _ = Describe("Manager.EditMessage", func() {
 		edited := append([]gwsdk.EditMessageRequest(nil), gw.edited...)
 		gw.mu.Unlock()
 		Expect(edited).To(ConsistOf(gwsdk.EditMessageRequest{
+			RunURL:      "https://cc.example/instances/1/runs/run-1",
 			MessageID:   "C1/1",
 			Payload:     `{"text":"done"}`,
 			Attachments: []gwsdk.FileAttachment{{Filename: "report.txt", MimeType: "text/plain", Content: []byte("hello")}},
@@ -504,6 +506,7 @@ func TestPostKeepsThreadWhenAgentStampsRunContext(t *testing.T) {
 	defer bundle.Close()
 	m := NewManager(bundle, humaninput.New(), nil)
 	m.launch = s.launcher()
+	m.RunURL = func(id string) string { return "https://cc.example/instances/1/runs/" + id }
 	if err := m.Start(context.Background(), Config{Name: "slack", Version: "local"}); err != nil {
 		t.Fatal(err)
 	}
@@ -519,7 +522,7 @@ func TestPostKeepsThreadWhenAgentStampsRunContext(t *testing.T) {
 		t.Fatalf("posts: %v", gw.postedRequests)
 	}
 	got := gw.postedRequests[0]
-	if got.ThreadID != "chain-1" || got.MissionID != "run-1" || got.TaskID != "task-1" {
+	if got.ThreadID != "chain-1" || got.MissionID != "run-1" || got.TaskID != "task-1" || got.RunURL != "https://cc.example/instances/1/runs/run-1" {
 		t.Fatalf("identity: %+v", got)
 	}
 }

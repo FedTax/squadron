@@ -94,6 +94,7 @@ var _ = Describe("squadronAPI.ListHumanInputs", func() {
 	It("filters by state and mission_id", func() {
 		bundle := newAPITestBundle()
 		api, _ := newSquadronAPI(bundle, nil)
+		api.runURL = func(id string) string { return "https://cc.example/instances/1/runs/" + id }
 		m1, err := bundle.Missions.CreateMission("first", "shared-thread", "{}", "{}")
 		Expect(err).NotTo(HaveOccurred())
 		m2, err := bundle.Missions.CreateMission("second", "shared-thread", "{}", "{}")
@@ -117,6 +118,9 @@ var _ = Describe("squadronAPI.ListHumanInputs", func() {
 		Expect(rows).To(HaveLen(2))
 		Expect(rows[0].ThreadID).To(Equal("shared-thread"))
 		Expect(rows[1].ThreadID).To(Equal("shared-thread"))
+		for _, row := range rows {
+			Expect(row.RunURL).To(Equal(api.runURL(row.MissionID)))
+		}
 
 		// State + mission filter.
 		rows, _, err = api.ListHumanInputs(context.Background(),

@@ -20,6 +20,8 @@ import (
 // listening socket first, allowing consumer-side `mcp` blocks declared in
 // the same config to dial localhost without deadlocking on themselves.
 type Deps struct {
+	// RunURL resolves the link returned with a newly started run.
+	RunURL func(string) string
 	// Config returns the current config snapshot (may be hot-reloaded).
 	Config func() *config.Config
 	// Stores returns the active store bundle. May return nil before the full

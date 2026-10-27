@@ -11,7 +11,7 @@ import (
 func TestRunMissionPassesThreadSeparatelyFromInputs(t *testing.T) {
 	for _, supplied := range []string{"", "case-123"} {
 		t.Run(supplied, func(t *testing.T) {
-			h := &handlers{deps: Deps{RunMission: func(name string, inputs map[string]string, threadID string) (string, string, error) {
+			h := &handlers{deps: Deps{RunURL: func(id string) string { return "https://cc.example/instances/1/runs/" + id }, RunMission: func(name string, inputs map[string]string, threadID string) (string, string, error) {
 				if name != "triage" || inputs["issue"] != "DEV-1" || threadID != supplied {
 					t.Fatalf("start args: %s %v %s", name, inputs, threadID)
 				}
@@ -30,6 +30,7 @@ func TestRunMissionPassesThreadSeparatelyFromInputs(t *testing.T) {
 				t.Fatalf("result: %+v %v", result, err)
 			}
 			var body struct {
+				RunURL    string `json:"runUrl"`
 				MissionID string `json:"missionId"`
 				ThreadID  string `json:"threadId"`
 			}
@@ -40,7 +41,7 @@ func TestRunMissionPassesThreadSeparatelyFromInputs(t *testing.T) {
 			if want == "" {
 				want = "generated-thread"
 			}
-			if body.MissionID != "run-1" || body.ThreadID != want {
+			if body.MissionID != "run-1" || body.ThreadID != want || body.RunURL != "https://cc.example/instances/1/runs/run-1" {
 				t.Fatalf("identities: %+v", body)
 			}
 		})
