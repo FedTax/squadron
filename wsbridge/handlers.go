@@ -1312,6 +1312,8 @@ func (c *Client) runMissionChain(ctx context.Context, cancel context.CancelFunc,
 		cfg := c.getConfig()
 		debugLogger, _ := mission.NewDebugLogger("")
 		var newErr error
+		// Carry the thread ID forward so the next mission remains in this chain
+		// of related runs while receiving its own mission ID.
 		runner, newErr = mission.NewRunner(cfg, c.configPath, nextMission, inputs, mission.WithThreadID(runner.ThreadID()), mission.WithDebugLogger(debugLogger), mission.WithHumanBridge(c), mission.WithGatewayBridge(c.gatewayBridge))
 		if newErr != nil {
 			log.Printf("Failed to create runner for chained mission %q: %v", nextMission, newErr)

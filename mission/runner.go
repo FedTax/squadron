@@ -261,6 +261,8 @@ func NewRunner(cfg *config.Config, configPath string, missionName string, inputs
 		opt(r)
 	}
 
+	// Preserve supplied thread IDs so separate runs can share a mission thread.
+	// Resuming restores the stored ID; only an unassigned new run needs a UUID.
 	if r.resumeMissionID != "" {
 		record, err := stores.Missions.GetMission(r.resumeMissionID)
 		if err != nil {
